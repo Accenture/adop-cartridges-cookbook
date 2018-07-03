@@ -7,14 +7,13 @@ permalink: /docs/recipes/adding-a-pluggable-scm/
 This section describes how to add a Pluggable SCM to your current cartridge.
 It is done by using a custom groovy package _pluggable.scm.*_  to implement a chosen SCM provider based on Java reflection with the help of _SCMProvider_ class.
 
-# Method
-
+# How to add pluggable to your project 
 Pluggable SCM allows to use below SCM providers but it can be extended
 
 * Gerrit
 * BitBucket
 
-This requires an additional package and class
+Using it requires an additional package and class
 
 ```   	
  import pluggable.scm.*;
@@ -31,6 +30,7 @@ As your chosen SCM will be used, no more gerrit project is needed, so this can b
 
 Once you have done the above, you need to edit the job
 
+## Using pluggable in Jenkins jobs declarations
 To be able to use Pluggable SCM, it is needed to replace 
 
 ```   	
@@ -102,6 +102,32 @@ _scmProvider.trigger()_ acts as the default scm function which you are replacing
 
 **Note:** Those changes require the _Load_Cartridge_ job to be updated, more details can be found [here](TODO:URL).
 
+## Using pluggable SCM with multi-branch pipelines
+Pluggable SCM can also be used for multi-branch pipelines in a similar way by replacing
+
+```   	
+branchSources {
+        git {
+            remote(referenceAppGitUrl)
+            credentialsId("adop-jenkins-master")
+        }
+    }
+```
+
+with
+
+```   	
+branchSources scmProvider.getMultibranch(projectFolderName, referenceAppGitRepo, "adop-jenkins-master", null)
+
+```
+where :
+
+* **projectFolderName** - name of your project
+* **referenceAppGitRepo** - name of the repository you want to clone i.e. _spring-petclinic_
+* **adop-jenkins-master** - the id of the Jenkins credentials to be used in the job in order to clone from SCM
+* **null** - extras to be used, for example _{ignoreOnPushNotifications()}_. More extensions can be found for specific SCM providers here - [Jenkins job DSL - plugin](https://jenkinsci.github.io/job-dsl-plugin/#path/multibranchPipelineJob-branchSources)
+
+
 # Example
 ```
 import pluggable.scm.*;
@@ -109,6 +135,7 @@ SCMProvider scmProvider = SCMProviderHandler.getScmProvider("${SCM_PROVIDER_ID}"
 
 def projectFolderName = "${PROJECT_NAME}"
 def buildAppJob = freeStyleJob(projectFolderName + "/<JOB_NAME>")
+def multibranchPipelineJob = multibranchPipelineJob(projectFolderName + "<MULTI_BRANBCH_JOB_NAME>")
 
 def referenceAppgitRepo = "spring-petclinic"
 
@@ -125,6 +152,21 @@ buildAppJob.with {
     triggers scmProvider.trigger(projectFolderName, referenceAppGitRepo, "master")
     ...
 }
+
+multibranchPipelineJob.with{
+
+   branchSources scmProvider.getMultibranch(projectFolderName, referenceAppGitRepo, "adop-jenkins-master", null)
+
+   triggers {
+      periodic(1)
+    }
+	
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
+        }
+    }
+ }
 ```
 
 
