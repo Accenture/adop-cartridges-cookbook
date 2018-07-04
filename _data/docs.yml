@@ -9,7 +9,8 @@
 - title: Pluggable
   docs:
   - recipes/adding-a-pluggable-scm
-
+  - recipes/adding-a-pluggable-scm-for-pipelines
+  
 - title: Building an app
   docs:
   - recipes/running-maven
